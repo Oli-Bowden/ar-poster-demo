@@ -2,13 +2,16 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Persistent Anchor, Scale & Drag Rotation</title>
+  <title>AR Cube Persistent + Pinch & Drag Scale/Rotate</title>
 
   <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
   <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- Gesture Detector for pinch/rotate -->
+  <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-gesture-detector@v4.0.0/dist/aframe-gesture-detector.min.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; }
@@ -120,20 +123,19 @@
       const scene = document.querySelector('a-scene');
       const closeBtn = document.getElementById('closeBtn');
 
-      // Create cube entity with custom multi-colored cube
+      // Create cube entity with multi-colored cube component
       const cubeEntity = document.createElement('a-entity');
       cubeEntity.setAttribute('multi-colored-cube', '');
+      cubeEntity.setAttribute('gesture-detector', '');
       container.appendChild(cubeEntity);
 
-      let isCubeDetached = false;
-
-      // Scaling variables
+      let isDetached = false;
       let currentScale = 1;
+
       const scaleDisplay = document.getElementById('scaleDisplay');
       const scaleUpBtn = document.getElementById('scaleUp');
       const scaleDownBtn = document.getElementById('scaleDown');
 
-      // Update scale display
       function updateScaleDisplay() {
         scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       }
@@ -150,62 +152,40 @@
         updateScaleDisplay();
       });
 
-      // Drag rotation
-      let isDragging = false;
-      let previousX = 0;
-      let previousY = 0;
+      // Drag and pinch handling using gesture-detector events
+      cubeEntity.addEventListener('drag', (event) => {
+        const { detail } = event;
+        cubeEntity.object3D.rotation.y += detail.delta.x * 0.005;
+        cubeEntity.object3D.rotation.x += detail.delta.y * 0.005;
+      });
 
-      function onPointerDown(event) {
-        isDragging = true;
-        previousX = event.clientX || (event.touches && event.touches[0].clientX);
-        previousY = event.clientY || (event.touches && event.touches[0].clientY);
-        event.preventDefault();
-      }
-
-      function onPointerMove(event) {
-        if (!isDragging) return;
-        const currentX = event.clientX || (event.touches && event.touches[0].clientX);
-        const currentY = event.clientY || (event.touches && event.touches[0].clientY);
-        const deltaX = currentX - previousX;
-        const deltaY = currentY - previousY;
-        previousX = currentX;
-        previousY = currentY;
-
-        cubeEntity.object3D.rotation.y += deltaX * 0.01;
-        cubeEntity.object3D.rotation.x += deltaY * 0.01;
-      }
-
-      function onPointerUp(event) {
-        isDragging = false;
-      }
-
-      cubeEntity.addEventListener('mousedown', onPointerDown);
-      window.addEventListener('mousemove', onPointerMove);
-      window.addEventListener('mouseup', onPointerUp);
-
-      cubeEntity.addEventListener('touchstart', onPointerDown);
-      window.addEventListener('touchmove', onPointerMove);
-      window.addEventListener('touchend', onPointerUp);
+      cubeEntity.addEventListener('pinch', (event) => {
+        const { detail } = event;
+        currentScale *= detail.scale;
+        currentScale = Math.min(Math.max(currentScale, 0.2), 3);
+        cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
+        updateScaleDisplay();
+      });
 
       // MindAR target tracking events
       const mindarTarget = document.querySelector('[mindar-image-target]');
 
       mindarTarget.addEventListener('targetFound', () => {
-        if (isCubeDetached) {
-          // Reattach cube to image target
+        if (isDetached) {
+          // Reattach cube to target container
           cubeEntity.object3D.position.set(0, 0, 0);
           cubeEntity.object3D.rotation.set(0, 0, 0);
           cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
           container.appendChild(cubeEntity);
-          isCubeDetached = false;
+          isDetached = false;
           closeBtn.style.display = 'none';
           cubeEntity.object3D.visible = true;
         }
       });
 
       mindarTarget.addEventListener('targetLost', () => {
-        if (!isCubeDetached) {
-          // Detach cube and keep visible at last known position
+        if (!isDetached) {
+          // Detach cube and keep it visible at last world position/rotation
           const worldPos = new THREE.Vector3();
           const worldQuat = new THREE.Quaternion();
           cubeEntity.object3D.getWorldPosition(worldPos);
@@ -215,18 +195,17 @@
           cubeEntity.object3D.position.copy(worldPos);
           cubeEntity.object3D.quaternion.copy(worldQuat);
 
-          isCubeDetached = true;
+          isDetached = true;
           closeBtn.style.display = 'block';
         }
       });
 
-      // Close button hides the cube and resets state
+      // Close button hides cube and resets
       closeBtn.addEventListener('click', () => {
         cubeEntity.object3D.visible = false;
         closeBtn.style.display = 'none';
-        isCubeDetached = false;
+        isDetached = false;
 
-        // Reset cube for next detection
         cubeEntity.object3D.position.set(0, 0, 0);
         cubeEntity.object3D.rotation.set(0, 0, 0);
         cubeEntity.object3D.scale.set(1, 1, 1);
