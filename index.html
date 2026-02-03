@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Multi-Coloured Faces, Scale & Drag Rotation + Pinch-to-Scale</title>
+  <title>AR Cube with Multi-Coloured Faces, Scale & Drag Rotation + Pinch Scale</title>
 
   <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -70,7 +70,6 @@
     AFRAME.registerComponent('multi-colored-cube', {
       init: function () {
         const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-
         const faceColors = [
           new THREE.Color('red'),    // right
           new THREE.Color('green'),  // left
@@ -89,10 +88,8 @@
         }
 
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-
         const material = new THREE.MeshBasicMaterial({ vertexColors: true });
         const mesh = new THREE.Mesh(geometry, material);
-
         this.el.setObject3D('mesh', mesh);
       }
     });
@@ -118,6 +115,7 @@
         scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       }
 
+      // Buttons to scale cube
       scaleUpBtn.addEventListener('click', () => {
         currentScale = Math.min(currentScale + 0.1, 3);
         cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
@@ -130,35 +128,46 @@
         updateScaleDisplay();
       });
 
+      // Rotation handlers for drag
       function onPointerDown(event) {
-        isDragging = true;
-        previousX = event.clientX || (event.touches && event.touches[0].clientX);
-        previousY = event.clientY || (event.touches && event.touches[0].clientY);
-        event.preventDefault();
+        if (event.touches && event.touches.length === 1) {
+          isDragging = true;
+          previousX = event.touches[0].clientX;
+          previousY = event.touches[0].clientY;
+          event.preventDefault();
+        }
       }
 
       function onPointerMove(event) {
-        if (!isDragging) return;
-        const currentX = event.clientX || (event.touches && event.touches[0].clientX);
-        const currentY = event.clientY || (event.touches && event.touches[0].clientY);
+        if (!isDragging || !event.touches || event.touches.length !== 1) return;
+
+        const currentX = event.touches[0].clientX;
+        const currentY = event.touches[0].clientY;
+
         const deltaX = currentX - previousX;
         const deltaY = currentY - previousY;
+
         previousX = currentX;
         previousY = currentY;
 
         cubeEntity.object3D.rotation.y += deltaX * 0.01;
         cubeEntity.object3D.rotation.x += deltaY * 0.01;
 
+        // Clamp vertical rotation between -90 and 90 degrees
         const maxX = Math.PI / 2;
         const minX = -Math.PI / 2;
         if (cubeEntity.object3D.rotation.x > maxX) cubeEntity.object3D.rotation.x = maxX;
         if (cubeEntity.object3D.rotation.x < minX) cubeEntity.object3D.rotation.x = minX;
+
+        event.preventDefault();
       }
 
       function onPointerUp(event) {
         isDragging = false;
+        event.preventDefault();
       }
 
+      // Pinch scaling helpers
       function getDistance(touches) {
         const dx = touches[0].clientX - touches[1].clientX;
         const dy = touches[0].clientY - touches[1].clientY;
@@ -168,6 +177,7 @@
       function onTouchStart(event) {
         if (event.touches.length === 2) {
           initialPinchDistance = getDistance(event.touches);
+          event.preventDefault();
         } else if (event.touches.length === 1) {
           onPointerDown(event);
         }
@@ -183,6 +193,8 @@
 
           cubeEntity.object3D.scale.set(newScale, newScale, newScale);
           scaleDisplay.textContent = `Scale: ${newScale.toFixed(2)}x`;
+
+          event.preventDefault();
         } else if (event.touches.length === 1) {
           onPointerMove(event);
         }
@@ -198,14 +210,40 @@
         }
       }
 
-      const sceneEl = document.querySelector('a-scene');
-      sceneEl.addEventListener('mousedown', onPointerDown);
-      window.addEventListener('mousemove', onPointerMove);
-      window.addEventListener('mouseup', onPointerUp);
+      // Attach touch events to the cube entity
+      cubeEntity.addEventListener('touchstart', onTouchStart);
+      cubeEntity.addEventListener('touchmove', onTouchMove);
+      cubeEntity.addEventListener('touchend', onTouchEnd);
+      cubeEntity.addEventListener('touchcancel', onTouchEnd);
 
-      sceneEl.addEventListener('touchstart', onTouchStart);
-      window.addEventListener('touchmove', onTouchMove);
-      window.addEventListener('touchend', onTouchEnd);
+      // Also add mouse events for desktop testing (optional)
+      cubeEntity.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        previousX = e.clientX;
+        previousY = e.clientY;
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - previousX;
+        const deltaY = e.clientY - previousY;
+        previousX = e.clientX;
+        previousY = e.clientY;
+
+        cubeEntity.object3D.rotation.y += deltaX * 0.01;
+        cubeEntity.object3D.rotation.x += deltaY * 0.01;
+
+        const maxX = Math.PI / 2;
+        const minX = -Math.PI / 2;
+        if (cubeEntity.object3D.rotation.x > maxX) cubeEntity.object3D.rotation.x = maxX;
+        if (cubeEntity.object3D.rotation.x < minX) cubeEntity.object3D.rotation.x = minX;
+
+        e.preventDefault();
+      });
+      window.addEventListener('mouseup', (e) => {
+        isDragging = false;
+        e.preventDefault();
+      });
 
       updateScaleDisplay();
     };
