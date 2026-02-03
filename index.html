@@ -2,12 +2,9 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Colorful Cube with Drag Rotation and Scale</title>
+  <title>AR Colored Cube with Drag Rotation</title>
 
-  <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-
-  <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -59,8 +56,8 @@
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-box id="myBox" position="0 0 0" depth="0.3" height="0.3" width="0.3"
-             material="vertexColors: face"
-      ></a-box>
+             material="vertexColors: true; side: double;">
+      </a-box>
     </a-entity>
 
   </a-scene>
@@ -76,27 +73,49 @@
     window.onload = () => {
       const cube = document.querySelector('#myBox');
 
-      // Set per-face colors on the cube geometry
-      const geometry = cube.getObject3D('mesh').geometry;
-      const colors = [
-        new THREE.Color(0xff0000), // red
-        new THREE.Color(0x00ff00), // green
-        new THREE.Color(0x0000ff), // blue
-        new THREE.Color(0xffff00), // yellow
-        new THREE.Color(0xff00ff), // magenta
-        new THREE.Color(0x00ffff), // cyan
-      ];
+      // Wait for mesh to be ready
+      cube.addEventListener('model-loaded', () => {
+        // console.log('Model loaded');
+      });
 
-      const colorAttr = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count * 3), 3);
-      for(let face = 0; face < 6; face++){
-        const color = colors[face];
-        for(let vertex = 0; vertex < 6; vertex++){
-          const vertexIndex = face * 6 + vertex;
-          colorAttr.setXYZ(vertexIndex, color.r, color.g, color.b);
+      // AFRAME's primitive geometry is ready immediately, but we do after a small delay to be sure
+      setTimeout(() => {
+        const mesh = cube.getObject3D('mesh');
+        if (!mesh) {
+          console.error('Cube mesh not found');
+          return;
         }
-      }
-      geometry.setAttribute('color', colorAttr);
-      geometry.attributes.color.needsUpdate = true;
+        const geometry = mesh.geometry;
+
+        // 36 vertices: 6 faces * 2 triangles * 3 vertices
+        // We'll color each face a different color
+        const faceColors = [
+          new THREE.Color(0xff0000), // Red
+          new THREE.Color(0x00ff00), // Green
+          new THREE.Color(0x0000ff), // Blue
+          new THREE.Color(0xffff00), // Yellow
+          new THREE.Color(0xff00ff), // Magenta
+          new THREE.Color(0x00ffff)  // Cyan
+        ];
+
+        // Create the color attribute array (r,g,b per vertex)
+        const colorArray = new Float32Array(geometry.attributes.position.count * 3);
+
+        // Assign colors per face (each face = 2 triangles = 6 vertices)
+        for(let faceIndex = 0; faceIndex < 6; faceIndex++) {
+          const color = faceColors[faceIndex];
+          for(let vert = 0; vert < 6; vert++) {
+            const vertexIndex = faceIndex * 6 + vert;
+            colorArray[vertexIndex * 3] = color.r;
+            colorArray[vertexIndex * 3 + 1] = color.g;
+            colorArray[vertexIndex * 3 + 2] = color.b;
+          }
+        }
+
+        // Set the color attribute on geometry
+        geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+        geometry.attributes.color.needsUpdate = true;
+      }, 100);
 
       // Drag rotation variables
       let isDragging = false;
