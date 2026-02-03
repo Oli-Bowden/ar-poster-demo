@@ -2,9 +2,16 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Simple Floating AR Demo</title>
+  <title>AR Cube with Gesture Control</title>
+
+  <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+  <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- Gesture detector for touch interactions -->
+  <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-gesture-detector@v4.0.0/dist/aframe-gesture-detector.min.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
   <a-scene
@@ -15,9 +22,33 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-box position="0 0 0" depth="0.2" height="0.2" width="0.2" color="blue"></a-box>
+      <a-box
+        id="myBox"
+        position="0 0 0"
+        depth="0.2"
+        height="0.2"
+        width="0.2"
+        color="blue"
+        gesture-detector>
+      </a-box>
     </a-entity>
 
   </a-scene>
+
+  <script>
+    const box = document.querySelector('#myBox');
+
+    // Handle rotation gesture
+    box.addEventListener('rotation', (event) => {
+      const rotation = event.detail.rotation;
+      box.object3D.rotation.y += rotation;
+    });
+
+    // Handle scale gesture
+    box.addEventListener('scale', (event) => {
+      const scale = event.detail.scale;
+      box.object3D.scale.multiplyScalar(scale);
+    });
+  </script>
 </body>
 </html>
