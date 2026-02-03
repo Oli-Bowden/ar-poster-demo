@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Star with Scaling Controls</title>
+  <title>AR Cube with Scaling</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -55,15 +55,14 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <!-- Star Model -->
-      <a-entity
-        id="myStar"
-        gltf-model="https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Models@master/2.0/Star/glTF/Star.gltf"
-        scale="0.5 0.5 0.5"
+      <a-box
+        id="myCube"
         position="0 0 0"
-        rotation="0 0 0"
-        color="yellow"
-      ></a-entity>
+        depth="0.2"
+        height="0.2"
+        width="0.2"
+        color="blue"
+      ></a-box>
     </a-entity>
 
   </a-scene>
@@ -73,49 +72,32 @@
 
   <div id="scaleDisplay">Scale: 1.00x</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
     window.onload = () => {
-      const star = document.querySelector('#myStar');
+      const cube = document.querySelector('#myCube');
       const scaleUp = document.getElementById('scaleUp');
       const scaleDown = document.getElementById('scaleDown');
       const scaleDisplay = document.getElementById('scaleDisplay');
 
       let currentScale = 1;
 
-      // Helper to change material color (optional)
-      function setStarColor(color) {
-        star.object3D.traverse((node) => {
-          if (node.isMesh) {
-            node.material.color.set(color);
-          }
-        });
-      }
-
-      // Update display text
       function updateDisplays() {
         scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       }
 
-      // Scale up button
       scaleUp.addEventListener('click', () => {
         currentScale = Math.min(currentScale + 0.1, 3);
-        star.object3D.scale.set(currentScale, currentScale, currentScale);
+        cube.object3D.scale.set(currentScale, currentScale, currentScale);
         updateDisplays();
       });
 
-      // Scale down button
       scaleDown.addEventListener('click', () => {
         currentScale = Math.max(currentScale - 0.1, 0.2);
-        star.object3D.scale.set(currentScale, currentScale, currentScale);
+        cube.object3D.scale.set(currentScale, currentScale, currentScale);
         updateDisplays();
       });
 
-      // Initialize display and color once model is loaded
-      star.addEventListener('model-loaded', () => {
-        setStarColor('yellow');
-        updateDisplays();
-      });
+      updateDisplays();
     };
   </script>
 
