@@ -35,27 +35,29 @@
 
   </a-scene>
 
-  <script>
-    window.onload = () => {
-      const box = document.querySelector('#myBox');
+<script>
+  window.onload = () => {
+    const box = document.querySelector('#myBox');
 
-      // Handle rotation gesture
-      box.addEventListener('rotation', (event) => {
-        const rotation = event.detail.rotation;
-        box.object3D.rotation.y += rotation;
-      });
+    const rotationFactor = 0.3;
+    const scaleFactor = 0.1;
 
-      // Handle scale gesture
-      box.addEventListener('scale', (event) => {
-        const scale = event.detail.scale;
-        box.object3D.scale.multiplyScalar(scale);
-      });
+    box.addEventListener('rotation', (event) => {
+      const rotation = event.detail.rotation * rotationFactor;
+      box.object3D.rotation.y += rotation;
+    });
 
-      // Fallback tap to rotate for testing
-      box.addEventListener('click', () => {
-        box.object3D.rotation.y += Math.PI / 4;
-      });
-    };
-  </script>
+    box.addEventListener('scale', (event) => {
+      const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
+      let newScale = box.object3D.scale.x * scaleChange;
+      newScale = Math.min(Math.max(newScale, 0.2), 3);
+      box.object3D.scale.set(newScale, newScale, newScale);
+    });
+
+    box.addEventListener('click', () => {
+      box.object3D.rotation.y += Math.PI / 4;
+    });
+  };
+</script>
 </body>
 </html>
