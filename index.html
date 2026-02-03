@@ -56,17 +56,12 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-box id="myDice" position="0 0 0" depth="0.3" height="0.3" width="0.3"
+      <!-- Dice cube with material per face -->
+      <a-box id="dice" position="0 0 0" depth="0.3" height="0.3" width="0.3"
         rotation="0 0 0"
         scale="1 1 1"
-        >
-        <!-- Applying dice textures on each side -->
-        <a-material
-          src="#dice-1"
-          side="double"
-          transparent="false"
-          ></a-material>
-      </a-box>
+        material="src: #dice-1; side: double;"
+        material__right="src: #dice-2; side: double;"/>
     </a-entity>
 
   </a-scene>
@@ -77,44 +72,48 @@
   <div id="scaleDisplay">Scale: 1.00x</div>
   <div id="rotationDisplay">Rotation: 0°</div>
 
-  <!-- Dice textures -->
-  <img id="dice-1" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-1.png" style="display:none"/>
-  <img id="dice-2" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-2.png" style="display:none"/>
-  <img id="dice-3" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-3.png" style="display:none"/>
-  <img id="dice-4" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-4.png" style="display:none"/>
-  <img id="dice-5" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-5.png" style="display:none"/>
-  <img id="dice-6" src="https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-6.png" style="display:none"/>
+  <!-- Dice face textures -->
+  <img id="dice-1" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice1.png" style="display:none" />
+  <img id="dice-2" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice2.png" style="display:none" />
+  <img id="dice-3" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice3.png" style="display:none" />
+  <img id="dice-4" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice4.png" style="display:none" />
+  <img id="dice-5" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice5.png" style="display:none" />
+  <img id="dice-6" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice6.png" style="display:none" />
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
     window.onload = () => {
-      const dice = document.querySelector('#myDice');
+      const dice = document.querySelector('#dice');
       const scaleUp = document.getElementById('scaleUp');
       const scaleDown = document.getElementById('scaleDown');
       const scaleDisplay = document.getElementById('scaleDisplay');
       const rotationDisplay = document.getElementById('rotationDisplay');
 
       let currentScale = 1;
-      let currentRotation = 0; // radians
+      let currentRotation = 0;
 
-      // Create a material array for each face with dice textures
-      const loader = new THREE.TextureLoader();
-      const materials = [
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-1.png') }), // right
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-6.png') }), // left
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-3.png') }), // top
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-4.png') }), // bottom
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-5.png') }), // front
-        new THREE.MeshBasicMaterial({ map: loader.load('https://cdn.jsdelivr.net/gh/adam-p/markdown-here@gh-pages/src/common/images/dice-2.png') }), // back
+      // Assign materials to each face of the box
+      const faceMaterials = [
+        '#dice-1', // right
+        '#dice-6', // left
+        '#dice-3', // top
+        '#dice-4', // bottom
+        '#dice-5', // front
+        '#dice-2'  // back
       ];
 
       dice.addEventListener('model-loaded', () => {
-        // If the dice had a model, set materials here
+        // Not used, no external model here
       });
 
-      // Assign the materials to the cube on scene load
+      // Set materials for each face
       dice.addEventListener('loaded', () => {
-        dice.getObject3D('mesh').material = materials;
+        const mesh = dice.getObject3D('mesh');
+        if (!mesh) return;
+
+        const loader = new THREE.TextureLoader();
+        const materials = faceMaterials.map(src => new THREE.MeshBasicMaterial({ map: loader.load(src) }));
+
+        mesh.material = materials;
       });
 
       function updateDisplays() {
@@ -134,8 +133,9 @@
         updateDisplays();
       });
 
+      // Rotate dice on tap
       dice.addEventListener('click', () => {
-        currentRotation += Math.PI / 4;
+        currentRotation += Math.PI / 4; // 45 degrees in radians
         dice.object3D.rotation.y = currentRotation;
         updateDisplays();
       });
