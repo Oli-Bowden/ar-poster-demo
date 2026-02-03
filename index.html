@@ -81,11 +81,10 @@
           new THREE.Color('orange')  // back
         ];
 
-        // Assign colours to each face (two faces per side because each side is made of 2 triangles)
+        // Assign colours to each face (two triangles per face)
         const colors = [];
         for (let i = 0; i < 6; i++) {
           const color = faceColors[i];
-          // Two triangles per face, each with 3 vertices
           for (let j = 0; j < 6; j++) {
             colors.push(color.r, color.g, color.b);
           }
@@ -138,7 +137,7 @@
         updateScaleDisplay();
       });
 
-      // Drag rotation handlers
+      // Drag rotation handlers for the whole AR scene
       function onPointerDown(event) {
         isDragging = true;
         previousX = event.clientX || (event.touches && event.touches[0].clientX);
@@ -158,12 +157,13 @@
         isDragging = false;
       }
 
-      // Attach mouse/touch events to cubeEntity's object3D.el (DOM element)
-      cubeEntity.addEventListener('mousedown', onPointerDown);
+      // Attach listeners to the whole scene for dragging anywhere
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('mousedown', onPointerDown);
       window.addEventListener('mousemove', onPointerMove);
       window.addEventListener('mouseup', onPointerUp);
 
-      cubeEntity.addEventListener('touchstart', onPointerDown);
+      sceneEl.addEventListener('touchstart', onPointerDown);
       window.addEventListener('touchmove', onPointerMove);
       window.addEventListener('touchend', onPointerUp);
 
