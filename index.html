@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Gesture Control + UI Buttons</title>
+  <title>AR Cube with Gesture Control + Visual Feedback</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -10,26 +10,47 @@
 
   <style>
     body { margin: 0; overflow: hidden; }
+
     .btn {
       position: fixed;
-      bottom: 20px;
-      width: 50px;
-      height: 50px;
-      background: rgba(0, 0, 255, 0.7);
+      bottom: 70px; /* raised to avoid iOS bottom bar */
+      width: 60px;
+      height: 60px;
+      background: rgba(0, 0, 255, 0.9);
       color: white;
-      font-size: 30px;
+      font-size: 40px;
+      font-weight: bold;
       text-align: center;
-      line-height: 50px;
-      border-radius: 8px;
+      line-height: 60px;
+      border-radius: 12px;
       user-select: none;
-      z-index: 10;
+      z-index: 1000;
       font-family: Arial, sans-serif;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
     }
     #scaleUp {
-      right: 80px;
+      right: 90px;
     }
     #scaleDown {
       right: 20px;
+    }
+
+    #scaleDisplay, #rotationDisplay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      z-index: 1000;
+      user-select: none;
+      width: max-content;
+    }
+    #rotationDisplay {
+      top: 60px;
     }
   </style>
 </head>
@@ -61,46 +82,67 @@
   <div id="scaleUp" class="btn">＋</div>
   <div id="scaleDown" class="btn">－</div>
 
+  <!-- Visual feedback -->
+  <div id="scaleDisplay">Scale: 1x</div>
+  <div id="rotationDisplay">Rotation: 0°</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
     window.onload = () => {
       const rotatable = document.querySelector('#rotatable');
+      const scaleDisplay = document.getElementById('scaleDisplay');
+      const rotationDisplay = document.getElementById('rotationDisplay');
       const btnUp = document.getElementById('scaleUp');
       const btnDown = document.getElementById('scaleDown');
 
       const rotationFactor = 0.3;
       const scaleFactor = 0.1;
 
-      // Gesture: rotate cube
+      // Initialize scale and rotation values
+      let currentScale = 1;
+      let currentRotation = 0; // in radians
+
       rotatable.addEventListener('rotation', (event) => {
         const rotation = event.detail.rotation * rotationFactor;
         rotatable.object3D.rotation.y += rotation;
+
+        currentRotation = rotatable.object3D.rotation.y;
+        rotationDisplay.textContent = `Rotation: ${Math.round(THREE.Math.radToDeg(currentRotation))}°`;
       });
 
-      // Gesture: scale cube
       rotatable.addEventListener('scale', (event) => {
         const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
         let newScale = rotatable.object3D.scale.x * scaleChange;
         newScale = Math.min(Math.max(newScale, 0.2), 3);
         rotatable.object3D.scale.set(newScale, newScale, newScale);
+
+        currentScale = newScale;
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       });
 
-      // Tap cube to rotate 45 degrees
       rotatable.addEventListener('click', () => {
         rotatable.object3D.rotation.y += Math.PI / 4;
+
+        currentRotation = rotatable.object3D.rotation.y;
+        rotationDisplay.textContent = `Rotation: ${Math.round(THREE.Math.radToDeg(currentRotation))}°`;
       });
 
-      // Button controls to scale up
       btnUp.addEventListener('click', () => {
         let newScale = rotatable.object3D.scale.x + 0.1;
         newScale = Math.min(newScale, 3);
         rotatable.object3D.scale.set(newScale, newScale, newScale);
+
+        currentScale = newScale;
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       });
 
-      // Button controls to scale down
       btnDown.addEventListener('click', () => {
         let newScale = rotatable.object3D.scale.x - 0.1;
         newScale = Math.max(newScale, 0.2);
         rotatable.object3D.scale.set(newScale, newScale, newScale);
+
+        currentScale = newScale;
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       });
     };
   </script>
