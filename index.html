@@ -35,29 +35,29 @@
 
   </a-scene>
 
-<script>
-  window.onload = () => {
-    const box = document.querySelector('#myBox');
+  <script>
+    window.onload = () => {
+      const box = document.querySelector('#myBox');
 
-    const rotationFactor = 0.3;
-    const scaleFactor = 0.1;
+      const rotationFactor = 0.3;
+      const scaleFactor = 0.1;
 
-    box.addEventListener('rotation', (event) => {
-      const rotation = event.detail.rotation * rotationFactor;
-      box.object3D.rotation.y += rotation;
-    });
+      box.addEventListener('rotation', (event) => {
+        const rotation = event.detail.rotation * rotationFactor;
+        box.object3D.rotation.y += rotation;
+      });
 
-    box.addEventListener('scale', (event) => {
-      const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
-      let newScale = box.object3D.scale.x * scaleChange;
-      newScale = Math.min(Math.max(newScale, 0.2), 3);
-      box.object3D.scale.set(newScale, newScale, newScale);
-    });
+      box.addEventListener('scale', (event) => {
+        const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
+        let newScale = box.object3D.scale.x * scaleChange;
+        newScale = Math.min(Math.max(newScale, 0.2), 3);
+        box.object3D.scale.set(newScale, newScale, newScale);
+      });
 
-    box.addEventListener('click', () => {
-      box.object3D.rotation.y += Math.PI / 4;
-    });
-  };
-</script>
+      box.addEventListener('click', () => {
+        box.object3D.rotation.y += Math.PI / 4;
+      });
+    };
+  </script>
 </body>
 </html>
