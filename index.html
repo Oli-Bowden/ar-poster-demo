@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Star with Color Change on Rotation</title>
+  <title>AR Star with Scaling Controls</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -29,7 +29,7 @@
     }
     #scaleUp { right: 90px; }
     #scaleDown { right: 20px; }
-    #scaleDisplay, #rotationDisplay {
+    #scaleDisplay {
       position: fixed;
       top: 20px;
       left: 20px;
@@ -43,7 +43,6 @@
       user-select: none;
       width: max-content;
     }
-    #rotationDisplay { top: 60px; }
   </style>
 </head>
 <body>
@@ -73,7 +72,6 @@
   <div id="scaleDown" class="btn">－</div>
 
   <div id="scaleDisplay">Scale: 1.00x</div>
-  <div id="rotationDisplay">Rotation: 0°</div>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
@@ -82,16 +80,10 @@
       const scaleUp = document.getElementById('scaleUp');
       const scaleDown = document.getElementById('scaleDown');
       const scaleDisplay = document.getElementById('scaleDisplay');
-      const rotationDisplay = document.getElementById('rotationDisplay');
 
       let currentScale = 1;
-      let currentRotation = 0; // in radians
 
-      // We'll cycle through colors by changing material color on the star
-      const colors = ['yellow', 'orange', 'red', 'purple', 'cyan'];
-      let colorIndex = 0;
-
-      // Helper to change color (glTF models can have multiple meshes)
+      // Helper to change material color (optional)
       function setStarColor(color) {
         star.object3D.traverse((node) => {
           if (node.isMesh) {
@@ -103,7 +95,6 @@
       // Update display text
       function updateDisplays() {
         scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
-        rotationDisplay.textContent = `Rotation: ${Math.round(THREE.Math.radToDeg(currentRotation))}°`;
       }
 
       // Scale up button
@@ -120,20 +111,9 @@
         updateDisplays();
       });
 
-      // Rotate star on tap/click, cycle colors
-      star.addEventListener('click', () => {
-        currentRotation += Math.PI / 4; // 45 degrees
-        star.object3D.rotation.y = currentRotation;
-
-        colorIndex = (colorIndex + 1) % colors.length;
-        setStarColor(colors[colorIndex]);
-
-        updateDisplays();
-      });
-
       // Initialize display and color once model is loaded
       star.addEventListener('model-loaded', () => {
-        setStarColor(colors[colorIndex]);
+        setStarColor('yellow');
         updateDisplays();
       });
     };
