@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Multi-Coloured Faces, Scale & Drag Rotation (X & Y)</title>
+  <title>AR Cube with Multi-Coloured Faces, Scale & Drag Rotation + Pinch-to-Scale</title>
 
   <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
@@ -108,6 +108,7 @@
       let previousX = 0;
       let previousY = 0;
       let currentScale = 1;
+      let initialPinchDistance = null;
 
       const scaleDisplay = document.getElementById('scaleDisplay');
       const scaleUpBtn = document.getElementById('scaleUp');
@@ -145,13 +146,9 @@
         previousX = currentX;
         previousY = currentY;
 
-        // Rotate Y (left/right drag)
         cubeEntity.object3D.rotation.y += deltaX * 0.01;
-
-        // Rotate X (up/down drag)
         cubeEntity.object3D.rotation.x += deltaY * 0.01;
 
-        // Clamp X rotation so cube doesn't flip upside down
         const maxX = Math.PI / 2;
         const minX = -Math.PI / 2;
         if (cubeEntity.object3D.rotation.x > maxX) cubeEntity.object3D.rotation.x = maxX;
@@ -162,14 +159,53 @@
         isDragging = false;
       }
 
+      function getDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function onTouchStart(event) {
+        if (event.touches.length === 2) {
+          initialPinchDistance = getDistance(event.touches);
+        } else if (event.touches.length === 1) {
+          onPointerDown(event);
+        }
+      }
+
+      function onTouchMove(event) {
+        if (event.touches.length === 2 && initialPinchDistance) {
+          const currentDistance = getDistance(event.touches);
+          const scaleChange = currentDistance / initialPinchDistance;
+          let newScale = currentScale * scaleChange;
+
+          newScale = Math.min(Math.max(newScale, 0.2), 3);
+
+          cubeEntity.object3D.scale.set(newScale, newScale, newScale);
+          scaleDisplay.textContent = `Scale: ${newScale.toFixed(2)}x`;
+        } else if (event.touches.length === 1) {
+          onPointerMove(event);
+        }
+      }
+
+      function onTouchEnd(event) {
+        if (event.touches.length < 2) {
+          currentScale = cubeEntity.object3D.scale.x;
+          initialPinchDistance = null;
+        }
+        if (event.touches.length === 0) {
+          onPointerUp(event);
+        }
+      }
+
       const sceneEl = document.querySelector('a-scene');
       sceneEl.addEventListener('mousedown', onPointerDown);
       window.addEventListener('mousemove', onPointerMove);
       window.addEventListener('mouseup', onPointerUp);
 
-      sceneEl.addEventListener('touchstart', onPointerDown);
-      window.addEventListener('touchmove', onPointerMove);
-      window.addEventListener('touchend', onPointerUp);
+      sceneEl.addEventListener('touchstart', onTouchStart);
+      window.addEventListener('touchmove', onTouchMove);
+      window.addEventListener('touchend', onTouchEnd);
 
       updateScaleDisplay();
     };
