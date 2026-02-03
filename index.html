@@ -2,9 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Colored Cube with Drag Rotation</title>
+  <title>AR Dice Cube with Drag Rotation and Scale</title>
 
+  <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+  <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -56,7 +59,9 @@
 
     <a-entity mindar-image-target="targetIndex: 0">
       <a-box id="myBox" position="0 0 0" depth="0.3" height="0.3" width="0.3"
-             material="vertexColors: true; side: double;">
+             material="vertexColors: face"
+             >
+        <!-- We will color each face with different colors via geometry -->
       </a-box>
     </a-entity>
 
@@ -67,100 +72,15 @@
 
   <div id="scaleDisplay">Scale: 1.00x</div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-
   <script>
     window.onload = () => {
-      const cube = document.querySelector('#myBox');
+      const cubeEntity = document.querySelector('#myBox');
 
-      // Wait for mesh to be ready
-      cube.addEventListener('model-loaded', () => {
-        // console.log('Model loaded');
-      });
-
-      // AFRAME's primitive geometry is ready immediately, but we do after a small delay to be sure
-      setTimeout(() => {
-        const mesh = cube.getObject3D('mesh');
-        if (!mesh) {
-          console.error('Cube mesh not found');
-          return;
-        }
-        const geometry = mesh.geometry;
-
-        // 36 vertices: 6 faces * 2 triangles * 3 vertices
-        // We'll color each face a different color
-        const faceColors = [
-          new THREE.Color(0xff0000), // Red
-          new THREE.Color(0x00ff00), // Green
-          new THREE.Color(0x0000ff), // Blue
-          new THREE.Color(0xffff00), // Yellow
-          new THREE.Color(0xff00ff), // Magenta
-          new THREE.Color(0x00ffff)  // Cyan
-        ];
-
-        // Create the color attribute array (r,g,b per vertex)
-        const colorArray = new Float32Array(geometry.attributes.position.count * 3);
-
-        // Assign colors per face (each face = 2 triangles = 6 vertices)
-        for(let faceIndex = 0; faceIndex < 6; faceIndex++) {
-          const color = faceColors[faceIndex];
-          for(let vert = 0; vert < 6; vert++) {
-            const vertexIndex = faceIndex * 6 + vert;
-            colorArray[vertexIndex * 3] = color.r;
-            colorArray[vertexIndex * 3 + 1] = color.g;
-            colorArray[vertexIndex * 3 + 2] = color.b;
-          }
-        }
-
-        // Set the color attribute on geometry
-        geometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
-        geometry.attributes.color.needsUpdate = true;
-      }, 100);
-
-      // Drag rotation variables
       let isDragging = false;
       let previousX = 0;
-
-      function getClientX(event) {
-        if (event.touches && event.touches.length > 0) return event.touches[0].clientX;
-        return event.clientX;
-      }
-
-      function onPointerDown(event) {
-        const targetEl = event.target;
-        if (targetEl === cube || cube.contains(targetEl)) {
-          isDragging = true;
-          previousX = getClientX(event);
-          event.preventDefault();
-        }
-      }
-
-      function onPointerMove(event) {
-        if (!isDragging) return;
-        const currentX = getClientX(event);
-        const deltaX = currentX - previousX;
-        previousX = currentX;
-
-        cube.object3D.rotation.y += deltaX * 0.01;
-        event.preventDefault();
-      }
-
-      function onPointerUp(event) {
-        isDragging = false;
-        event.preventDefault();
-      }
-
-      // Attach events
-      cube.addEventListener('mousedown', onPointerDown);
-      window.addEventListener('mousemove', onPointerMove);
-      window.addEventListener('mouseup', onPointerUp);
-
-      cube.addEventListener('touchstart', onPointerDown);
-      window.addEventListener('touchmove', onPointerMove);
-      window.addEventListener('touchend', onPointerUp);
-
-      // Scale buttons
       let currentScale = 1;
+      let isPointerDownOnCube = false;
+
       const scaleDisplay = document.getElementById('scaleDisplay');
       const scaleUpBtn = document.getElementById('scaleUp');
       const scaleDownBtn = document.getElementById('scaleDown');
@@ -171,19 +91,77 @@
 
       scaleUpBtn.addEventListener('click', () => {
         currentScale = Math.min(currentScale + 0.1, 3);
-        cube.object3D.scale.set(currentScale, currentScale, currentScale);
+        cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
         updateScaleDisplay();
       });
 
       scaleDownBtn.addEventListener('click', () => {
         currentScale = Math.max(currentScale - 0.1, 0.2);
-        cube.object3D.scale.set(currentScale, currentScale, currentScale);
+        cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
         updateScaleDisplay();
       });
+
+      // Apply different colors per face (AFRAME doesn't do it natively, so do it via Three.js)
+      // This will run once model is ready (or immediately since this is primitive)
+      const geometry = cubeEntity.getObject3D('mesh').geometry;
+      const colors = [
+        new THREE.Color(0xff0000), // red
+        new THREE.Color(0x00ff00), // green
+        new THREE.Color(0x0000ff), // blue
+        new THREE.Color(0xffff00), // yellow
+        new THREE.Color(0xff00ff), // magenta
+        new THREE.Color(0x00ffff), // cyan
+      ];
+
+      // Assign colors per face (2 faces per side in box geometry)
+      const colorAttr = new THREE.BufferAttribute(new Float32Array(geometry.attributes.position.count * 3), 3);
+      for(let face = 0; face < 6; face++){
+        const color = colors[face];
+        // 2 triangles per face, each triangle has 3 vertices => 6 vertices per face
+        for(let vertex = 0; vertex < 6; vertex++){
+          const vertexIndex = face * 6 + vertex;
+          colorAttr.setXYZ(vertexIndex, color.r, color.g, color.b);
+        }
+      }
+      geometry.setAttribute('color', colorAttr);
+      geometry.attributes.color.needsUpdate = true;
+
+      // Drag rotation handlers
+      function onPointerDown(event) {
+        if (event.target === cubeEntity || cubeEntity.contains(event.target)) {
+          isDragging = true;
+          isPointerDownOnCube = true;
+          previousX = event.clientX || (event.touches && event.touches[0].clientX);
+          event.preventDefault();
+        }
+      }
+
+      function onPointerMove(event) {
+        if (!isDragging || !isPointerDownOnCube) return;
+        const currentX = event.clientX || (event.touches && event.touches[0].clientX);
+        const deltaX = currentX - previousX;
+        previousX = currentX;
+
+        cubeEntity.object3D.rotation.y += deltaX * 0.01;
+      }
+
+      function onPointerUp(event) {
+        isDragging = false;
+        isPointerDownOnCube = false;
+      }
+
+      window.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+
+      window.addEventListener('touchstart', onPointerDown);
+      window.addEventListener('touchmove', onPointerMove);
+      window.addEventListener('touchend', onPointerUp);
 
       updateScaleDisplay();
     };
   </script>
 
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 </body>
 </html>
