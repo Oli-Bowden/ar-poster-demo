@@ -1,195 +1,171 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>MindAR + WebXR Persistent Cube Demo</title>
+  <meta charset="utf-8" />
+  <title>AR Cube with Multi-Coloured Faces, Scale & Drag Rotation</title>
+
+  <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+
+  <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
   <style>
     body { margin: 0; overflow: hidden; }
-    #startPersistentBtn, #exitBtn {
+    .btn {
+      position: fixed;
+      bottom: 70px;
+      width: 60px;
+      height: 60px;
+      background: rgba(0, 0, 255, 0.9);
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 60px;
+      border-radius: 12px;
+      user-select: none;
+      z-index: 1000;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    #scaleUp { right: 90px; }
+    #scaleDown { right: 20px; }
+
+    #scaleDisplay {
       position: fixed;
       top: 20px;
-      right: 20px;
-      padding: 12px 20px;
-      font-size: 18px;
-      background: rgba(0,0,255,0.9);
+      left: 20px;
+      background: rgba(0,0,0,0.6);
       color: white;
-      border: none;
+      padding: 8px 12px;
       border-radius: 8px;
-      cursor: pointer;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
       z-index: 1000;
-      display: none;
-    }
-    #exitBtn {
-      top: 60px;
-      background: rgba(255,0,0,0.9);
+      user-select: none;
+      width: max-content;
     }
   </style>
 </head>
 <body>
 
-  <!-- MindAR Scene -->
   <a-scene
-    id="mindar-scene"
     mindar-image="imageTargetSrc: targets.mind;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: true"
   >
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" id="cubeContainer">
-      <a-box id="mindarCube" position="0 0 0" depth="0.3" height="0.3" width="0.3" color="blue"></a-box>
-    </a-entity>
+    <a-entity mindar-image-target="targetIndex: 0" id="cubeContainer"></a-entity>
+
   </a-scene>
 
-  <button id="startPersistentBtn">Make Persistent</button>
-  <button id="exitBtn">Exit Persistent AR</button>
+  <div id="scaleUp" class="btn">＋</div>
+  <div id="scaleDown" class="btn">－</div>
+  <div id="scaleDisplay">Scale: 1.00x</div>
 
   <script>
-    const mindarScene = document.querySelector('#mindar-scene');
-    const mindarCube = document.querySelector('#mindarCube');
-    const startPersistentBtn = document.getElementById('startPersistentBtn');
-    const exitBtn = document.getElementById('exitBtn');
+    AFRAME.registerComponent('multi-colored-cube', {
+      init: function () {
+        const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        const faceColors = [
+          new THREE.Color('red'),    // right
+          new THREE.Color('green'),  // left
+          new THREE.Color('blue'),   // top
+          new THREE.Color('yellow'), // bottom
+          new THREE.Color('purple'), // front
+          new THREE.Color('orange')  // back
+        ];
 
-    let xrSession = null;
-    let xrRefSpace = null;
-    let xrViewerSpace = null;
-    let xrHitTestSource = null;
-    let xrAnchor = null;
-    let renderer, scene, camera, cube;
-    let cubePlaced = false;
-
-    // Show the "Make Persistent" button once the image is detected
-    mindarCube.addEventListener('model-loaded', () => {
-      // optional for glTF, for box just show button after small delay
-      setTimeout(() => {
-        startPersistentBtn.style.display = 'block';
-      }, 1000);
-    });
-
-    // Or show button as soon as tracking is found (better)
-    mindarScene.addEventListener('targetFound', (event) => {
-      startPersistentBtn.style.display = 'block';
-    });
-
-    // Hide button if target lost
-    mindarScene.addEventListener('targetLost', (event) => {
-      startPersistentBtn.style.display = 'none';
-    });
-
-    // When user clicks "Make Persistent"
-    startPersistentBtn.addEventListener('click', async () => {
-      startPersistentBtn.style.display = 'none';
-
-      // Stop MindAR tracking
-      await mindarScene.components['mindar-image'].stop();
-
-      // Hide MindAR canvas so we can overlay WebXR
-      mindarScene.style.display = 'none';
-
-      // Start WebXR AR session
-      if (navigator.xr) {
-        try {
-          xrSession = await navigator.xr.requestSession('immersive-ar', {
-            requiredFeatures: ['hit-test', 'anchors', 'local-floor']
-          });
-
-          setupWebXRRenderer();
-
-          exitBtn.style.display = 'block';
-          xrSession.addEventListener('end', () => {
-            xrSession = null;
-            exitBtn.style.display = 'none';
-            mindarScene.style.display = 'block';
-            mindarScene.components['mindar-image'].start();
-            cubePlaced = false;
-          });
-
-          await xrSession.updateRenderState({ baseLayer: new XRWebGLLayer(xrSession, renderer.getContext()) });
-          xrRefSpace = await xrSession.requestReferenceSpace('local-floor');
-          xrViewerSpace = await xrSession.requestReferenceSpace('viewer');
-
-          // Request hit-test source
-          xrHitTestSource = await xrSession.requestHitTestSource({ space: xrViewerSpace });
-
-          // Start rendering loop
-          xrSession.requestAnimationFrame(onXRFrame);
-        } catch (e) {
-          alert('Failed to start WebXR session: ' + e);
+        const colors = [];
+        for (let i = 0; i < 6; i++) {
+          const color = faceColors[i];
+          // Each face has 2 triangles, each triangle 3 vertices = 6 vertices per face
+          for (let j = 0; j < 6; j++) {
+            colors.push(color.r, color.g, color.b);
+          }
         }
-      } else {
-        alert('WebXR not supported on this device/browser');
+
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        const material = new THREE.MeshBasicMaterial({ vertexColors: true });
+        const mesh = new THREE.Mesh(geometry, material);
+        this.el.setObject3D('mesh', mesh);
       }
     });
 
-    // Exit button handler
-    exitBtn.addEventListener('click', () => {
-      if (xrSession) {
-        xrSession.end();
-      }
-    });
+    window.onload = () => {
+      const container = document.getElementById('cubeContainer');
 
-    // Setup Three.js renderer, scene, camera for WebXR
-    function setupWebXRRenderer() {
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      document.body.appendChild(renderer.domElement);
+      // Create cube entity
+      const cubeEntity = document.createElement('a-entity');
+      cubeEntity.setAttribute('multi-colored-cube', '');
+      container.appendChild(cubeEntity);
 
-      scene = new THREE.Scene();
-      camera = new THREE.PerspectiveCamera();
+      let isDragging = false;
+      let previousX = 0;
+      let previousY = 0;
+      let currentScale = 1;
 
-      // Add a simple cube
-      const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-      const material = new THREE.MeshBasicMaterial({ color: 'blue' });
-      cube = new THREE.Mesh(geometry, material);
-      cube.visible = false; // initially hidden
-      scene.add(cube);
-    }
+      const scaleDisplay = document.getElementById('scaleDisplay');
+      const scaleUpBtn = document.getElementById('scaleUp');
+      const scaleDownBtn = document.getElementById('scaleDown');
 
-    function onXRFrame(time, frame) {
-      const session = frame.session;
-      session.requestAnimationFrame(onXRFrame);
-
-      const pose = frame.getViewerPose(xrRefSpace);
-      if (!pose) return;
-
-      if (!cubePlaced) {
-        // Perform hit test to place cube
-        const hitTestResults = frame.getHitTestResults(xrHitTestSource);
-        if (hitTestResults.length > 0) {
-          const hitPose = hitTestResults[0].getPose(xrRefSpace);
-
-          // Place cube at hit test position
-          cube.position.set(hitPose.transform.position.x, hitPose.transform.position.y, hitPose.transform.position.z);
-          cube.visible = true;
-
-          // Create anchor for persistence
-          frame.createAnchor(hitPose.transform, xrRefSpace).then(anchor => {
-            xrAnchor = anchor;
-            anchor.context = cube;
-          });
-
-          cubePlaced = true;
-        }
-      } else if (xrAnchor) {
-        // Update cube position from anchor pose
-        const anchorPose = frame.getPose(xrAnchor.anchorSpace, xrRefSpace);
-        if (anchorPose) {
-          cube.position.set(anchorPose.transform.position.x, anchorPose.transform.position.y, anchorPose.transform.position.z);
-          cube.quaternion.set(
-            anchorPose.transform.orientation.x,
-            anchorPose.transform.orientation.y,
-            anchorPose.transform.orientation.z,
-            anchorPose.transform.orientation.w
-          );
-        }
+      function updateScaleDisplay() {
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       }
 
-      renderer.render(scene, camera);
-    }
+      scaleUpBtn.addEventListener('click', () => {
+        currentScale = Math.min(currentScale + 0.1, 3);
+        cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
+        updateScaleDisplay();
+      });
+
+      scaleDownBtn.addEventListener('click', () => {
+        currentScale = Math.max(currentScale - 0.1, 0.2);
+        cubeEntity.object3D.scale.set(currentScale, currentScale, currentScale);
+        updateScaleDisplay();
+      });
+
+      function onPointerDown(event) {
+        isDragging = true;
+        previousX = event.clientX || (event.touches && event.touches[0].clientX);
+        previousY = event.clientY || (event.touches && event.touches[0].clientY);
+        event.preventDefault();
+      }
+
+      function onPointerMove(event) {
+        if (!isDragging) return;
+        const currentX = event.clientX || (event.touches && event.touches[0].clientX);
+        const currentY = event.clientY || (event.touches && event.touches[0].clientY);
+
+        const deltaX = currentX - previousX;
+        const deltaY = currentY - previousY;
+
+        previousX = currentX;
+        previousY = currentY;
+
+        // Rotate cube around Y axis (left/right drag)
+        cubeEntity.object3D.rotation.y += deltaX * 0.01;
+        // Rotate cube around X axis (up/down drag)
+        cubeEntity.object3D.rotation.x += deltaY * 0.01;
+      }
+
+      function onPointerUp(event) {
+        isDragging = false;
+      }
+
+      cubeEntity.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+
+      cubeEntity.addEventListener('touchstart', onPointerDown);
+      window.addEventListener('touchmove', onPointerMove);
+      window.addEventListener('touchend', onPointerUp);
+
+      updateScaleDisplay();
+    };
   </script>
 
 </body>
