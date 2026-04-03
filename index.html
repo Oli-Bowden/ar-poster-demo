@@ -112,7 +112,7 @@
       const scaleDownBtn = document.getElementById('scaleDown');
 
       function updateScaleDisplay() {
-        scaleDisplay.textContent = Scale: ${currentScale.toFixed(2)}x;
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
       }
 
       // Buttons to scale cube
@@ -192,7 +192,7 @@
           newScale = Math.min(Math.max(newScale, 0.2), 3);
 
           cubeEntity.object3D.scale.set(newScale, newScale, newScale);
-          scaleDisplay.textContent = Scale: ${newScale.toFixed(2)}x;
+          scaleDisplay.textContent = `Scale: ${newScale.toFixed(2)}x`;
 
           event.preventDefault();
         } else if (event.touches.length === 1) {
