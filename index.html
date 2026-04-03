@@ -2,35 +2,48 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Gesture Control + UI Buttons</title>
+  <title>AR Dice Cube</title>
 
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-gesture-detector@v4.0.0/dist/aframe-gesture-detector.min.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; }
     .btn {
       position: fixed;
-      bottom: 20px;
-      width: 50px;
-      height: 50px;
-      background: rgba(0, 0, 255, 0.7);
+      bottom: 70px;
+      width: 60px;
+      height: 60px;
+      background: rgba(0, 0, 255, 0.9);
       color: white;
-      font-size: 30px;
+      font-size: 40px;
+      font-weight: bold;
       text-align: center;
-      line-height: 50px;
-      border-radius: 8px;
+      line-height: 60px;
+      border-radius: 12px;
       user-select: none;
-      z-index: 10;
+      z-index: 1000;
       font-family: Arial, sans-serif;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      cursor: pointer;
     }
-    #scaleUp {
-      right: 80px;
+    #scaleUp { right: 90px; }
+    #scaleDown { right: 20px; }
+    #scaleDisplay, #rotationDisplay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      z-index: 1000;
+      user-select: none;
+      width: max-content;
     }
-    #scaleDown {
-      right: 20px;
-    }
+    #rotationDisplay { top: 60px; }
   </style>
 </head>
 <body>
@@ -43,65 +56,91 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-entity id="rotatable" gesture-detector>
-        <a-box
-          id="myBox"
-          position="0 0 0"
-          depth="0.3"
-          height="0.3"
-          width="0.3"
-          color="blue">
-        </a-box>
-      </a-entity>
+      <!-- Dice cube with material per face -->
+      <a-box id="dice" position="0 0 0" depth="0.3" height="0.3" width="0.3"
+        rotation="0 0 0"
+        scale="1 1 1"
+        material="src: #dice-1; side: double;"
+        material__right="src: #dice-2; side: double;"/>
     </a-entity>
 
   </a-scene>
 
-  <!-- UI Buttons for scaling -->
   <div id="scaleUp" class="btn">＋</div>
   <div id="scaleDown" class="btn">－</div>
 
+  <div id="scaleDisplay">Scale: 1.00x</div>
+  <div id="rotationDisplay">Rotation: 0°</div>
+
+  <!-- Dice face textures -->
+  <img id="dice-1" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice1.png" style="display:none" />
+  <img id="dice-2" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice2.png" style="display:none" />
+  <img id="dice-3" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice3.png" style="display:none" />
+  <img id="dice-4" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice4.png" style="display:none" />
+  <img id="dice-5" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice5.png" style="display:none" />
+  <img id="dice-6" src="https://raw.githubusercontent.com/dalezak/dice-textures/main/dice6.png" style="display:none" />
+
   <script>
     window.onload = () => {
-      const rotatable = document.querySelector('#rotatable');
-      const btnUp = document.getElementById('scaleUp');
-      const btnDown = document.getElementById('scaleDown');
+      const dice = document.querySelector('#dice');
+      const scaleUp = document.getElementById('scaleUp');
+      const scaleDown = document.getElementById('scaleDown');
+      const scaleDisplay = document.getElementById('scaleDisplay');
+      const rotationDisplay = document.getElementById('rotationDisplay');
 
-      const rotationFactor = 0.3;
-      const scaleFactor = 0.1;
+      let currentScale = 1;
+      let currentRotation = 0;
 
-      // Gesture: rotate cube
-      rotatable.addEventListener('rotation', (event) => {
-        const rotation = event.detail.rotation * rotationFactor;
-        rotatable.object3D.rotation.y += rotation;
+      // Assign materials to each face of the box
+      const faceMaterials = [
+        '#dice-1', // right
+        '#dice-6', // left
+        '#dice-3', // top
+        '#dice-4', // bottom
+        '#dice-5', // front
+        '#dice-2'  // back
+      ];
+
+      dice.addEventListener('model-loaded', () => {
+        // Not used, no external model here
       });
 
-      // Gesture: scale cube
-      rotatable.addEventListener('scale', (event) => {
-        const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
-        let newScale = rotatable.object3D.scale.x * scaleChange;
-        newScale = Math.min(Math.max(newScale, 0.2), 3);
-        rotatable.object3D.scale.set(newScale, newScale, newScale);
+      // Set materials for each face
+      dice.addEventListener('loaded', () => {
+        const mesh = dice.getObject3D('mesh');
+        if (!mesh) return;
+
+        const loader = new THREE.TextureLoader();
+        const materials = faceMaterials.map(src => new THREE.MeshBasicMaterial({ map: loader.load(src) }));
+
+        mesh.material = materials;
       });
 
-      // Tap cube to rotate 45 degrees
-      rotatable.addEventListener('click', () => {
-        rotatable.object3D.rotation.y += Math.PI / 4;
+      function updateDisplays() {
+        scaleDisplay.textContent = `Scale: ${currentScale.toFixed(2)}x`;
+        rotationDisplay.textContent = `Rotation: ${Math.round(THREE.Math.radToDeg(currentRotation))}°`;
+      }
+
+      scaleUp.addEventListener('click', () => {
+        currentScale = Math.min(currentScale + 0.1, 3);
+        dice.object3D.scale.set(currentScale, currentScale, currentScale);
+        updateDisplays();
       });
 
-      // Button controls to scale up
-      btnUp.addEventListener('click', () => {
-        let newScale = rotatable.object3D.scale.x + 0.1;
-        newScale = Math.min(newScale, 3);
-        rotatable.object3D.scale.set(newScale, newScale, newScale);
+      scaleDown.addEventListener('click', () => {
+        currentScale = Math.max(currentScale - 0.1, 0.2);
+        dice.object3D.scale.set(currentScale, currentScale, currentScale);
+        updateDisplays();
       });
 
-      // Button controls to scale down
-      btnDown.addEventListener('click', () => {
-        let newScale = rotatable.object3D.scale.x - 0.1;
-        newScale = Math.max(newScale, 0.2);
-        rotatable.object3D.scale.set(newScale, newScale, newScale);
+      // Rotate dice on tap
+      dice.addEventListener('click', () => {
+        currentRotation += Math.PI / 4; // 45 degrees in radians
+        dice.object3D.rotation.y = currentRotation;
+        updateDisplays();
       });
+
+      updateDisplays();
     };
   </script>
 
