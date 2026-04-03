@@ -67,32 +67,14 @@
   <div id="scaleDisplay">Scale: 1.00x</div>
 
   <script>
-    AFRAME.registerComponent('multi-colored-cube', {
-      init: function () {
-        const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-        const faceColors = [
-          new THREE.Color('red'),    // right
-          new THREE.Color('green'),  // left
-          new THREE.Color('blue'),   // top
-          new THREE.Color('yellow'), // bottom
-          new THREE.Color('purple'), // front
-          new THREE.Color('orange')  // back
-        ];
-
-        const colors = [];
-        for (let i = 0; i < 6; i++) {
-          const color = faceColors[i];
-          for (let j = 0; j < 6; j++) {
-            colors.push(color.r, color.g, color.b);
-          }
-        }
-
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        const material = new THREE.MeshBasicMaterial({ vertexColors: true });
-        const mesh = new THREE.Mesh(geometry, material);
-        this.el.setObject3D('mesh', mesh);
-      }
-    });
+   AFRAME.registerComponent('multi-colored-cube', {
+  init: function () {
+    const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+    const material = new THREE.MeshBasicMaterial({ color: 'white' });
+    const mesh = new THREE.Mesh(geometry, material);
+    this.el.setObject3D('mesh', mesh);
+  }
+});
 
     window.onload = () => {
       const container = document.getElementById('cubeContainer');
