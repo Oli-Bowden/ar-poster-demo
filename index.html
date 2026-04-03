@@ -2,18 +2,39 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>AR Cube with Gesture Control</title>
+  <title>AR Cube with Gesture Control + UI Buttons</title>
 
-  <!-- A-Frame library -->
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-
-  <!-- MindAR for image tracking -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-  <!-- Gesture detector for touch interactions -->
   <script src="https://cdn.jsdelivr.net/gh/wmurphyrd/aframe-gesture-detector@v4.0.0/dist/aframe-gesture-detector.min.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+    .btn {
+      position: fixed;
+      bottom: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(0, 0, 255, 0.7);
+      color: white;
+      font-size: 30px;
+      text-align: center;
+      line-height: 50px;
+      border-radius: 8px;
+      user-select: none;
+      z-index: 10;
+      font-family: Arial, sans-serif;
+    }
+    #scaleUp {
+      right: 80px;
+    }
+    #scaleDown {
+      right: 20px;
+    }
+  </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
+<body>
+
   <a-scene
     mindar-image="imageTargetSrc: targets.mind;"
     vr-mode-ui="enabled: false"
@@ -22,42 +43,67 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-box
-        id="myBox"
-        position="0 0 0"
-        depth="0.2"
-        height="0.2"
-        width="0.2"
-        color="blue"
-        gesture-detector>
-      </a-box>
+      <a-entity id="rotatable" gesture-detector>
+        <a-box
+          id="myBox"
+          position="0 0 0"
+          depth="0.3"
+          height="0.3"
+          width="0.3"
+          color="blue">
+        </a-box>
+      </a-entity>
     </a-entity>
 
   </a-scene>
 
+  <!-- UI Buttons for scaling -->
+  <div id="scaleUp" class="btn">＋</div>
+  <div id="scaleDown" class="btn">－</div>
+
   <script>
     window.onload = () => {
-      const box = document.querySelector('#myBox');
+      const rotatable = document.querySelector('#rotatable');
+      const btnUp = document.getElementById('scaleUp');
+      const btnDown = document.getElementById('scaleDown');
 
       const rotationFactor = 0.3;
       const scaleFactor = 0.1;
 
-      box.addEventListener('rotation', (event) => {
+      // Gesture: rotate cube
+      rotatable.addEventListener('rotation', (event) => {
         const rotation = event.detail.rotation * rotationFactor;
-        box.object3D.rotation.y += rotation;
+        rotatable.object3D.rotation.y += rotation;
       });
 
-      box.addEventListener('scale', (event) => {
+      // Gesture: scale cube
+      rotatable.addEventListener('scale', (event) => {
         const scaleChange = 1 + (event.detail.scale - 1) * scaleFactor;
-        let newScale = box.object3D.scale.x * scaleChange;
+        let newScale = rotatable.object3D.scale.x * scaleChange;
         newScale = Math.min(Math.max(newScale, 0.2), 3);
-        box.object3D.scale.set(newScale, newScale, newScale);
+        rotatable.object3D.scale.set(newScale, newScale, newScale);
       });
 
-      box.addEventListener('click', () => {
-        box.object3D.rotation.y += Math.PI / 4;
+      // Tap cube to rotate 45 degrees
+      rotatable.addEventListener('click', () => {
+        rotatable.object3D.rotation.y += Math.PI / 4;
+      });
+
+      // Button controls to scale up
+      btnUp.addEventListener('click', () => {
+        let newScale = rotatable.object3D.scale.x + 0.1;
+        newScale = Math.min(newScale, 3);
+        rotatable.object3D.scale.set(newScale, newScale, newScale);
+      });
+
+      // Button controls to scale down
+      btnDown.addEventListener('click', () => {
+        let newScale = rotatable.object3D.scale.x - 0.1;
+        newScale = Math.max(newScale, 0.2);
+        rotatable.object3D.scale.set(newScale, newScale, newScale);
       });
     };
   </script>
+
 </body>
 </html>
